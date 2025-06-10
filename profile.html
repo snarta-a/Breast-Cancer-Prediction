@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Breast Cancer Predictor</title>
+    <link rel="stylesheet" href="../static/landing.css">
+    <link rel="stylesheet" href="../static/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-heartbeat"></i>Automated Breast Cancer Predictor</h1>
+            <button class="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav>
+                <ul>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/tool">Prediction Tool</a></li>
+                    {% if user_name %}
+                    <li>
+                        <div class="account-dropdown">
+                            <a href="#" class="account-btn">
+                                <i class="fas fa-user-md"></i> 
+                                <span>{% if user_role == "Doctor" %}Dr. {% endif %}{{ user_name }}</span>
+                                <i class="fas fa-caret-down"></i>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a href="/profile"><i class="fas fa-id-card"></i> Profile</a>
+                                <a href="/tool"><i class="fas fa-microscope"></i> Prediction Tool</a>
+                                <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li>
+                        <div class="account-dropdown">
+                            <a href="#" class="auth-btn">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Account</span>
+                                <i class="fas fa-caret-down"></i>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a href="/login"><i class="fas fa-sign-in-alt"></i> Log In</a>
+                                <a href="/signup"><i class="fas fa-user-plus"></i> Sign Up</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="profile-info">
+                    <h1>{{ user_name }}</h1>
+                    <p class="role-badge">{{ user_role }}</p>
+                    <p class="member-since">Member since {{ user_created[:10] }}</p>
+                </div>
+            </div>
+            
+            <!-- Notification Messages -->
+            {% if message %}
+            <div class="notification success">
+                <i class="fas fa-check-circle"></i> {{ message }}
+                <button class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            {% endif %}
+            
+            {% if error %}
+            <div class="notification error">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                <button class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            {% endif %}
+            
+            <div class="profile-tabs">
+                <button class="tab-btn active" data-tab="account">Account Information</button>
+                <button class="tab-btn" data-tab="security">Password & Security</button>
+            </div>
+            
+            <div class="profile-content">
+                <!-- Account Information Tab -->
+                <div class="tab-content active" id="account-tab">
+                    <form action="/profile" method="post" id="account-form">
+                        <div class="form-group">
+                            <h3><i class="fas fa-user"></i> Personal Information</h3>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="name">Full Name</label>
+                                    <input type="text" id="name" name="name" value="{{ user_name }}" required>
+                                </div>
+                                <div class="form-field">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" id="email" name="email" value="{{ user_email }}" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="role">Role</label>
+                                    <input type="text" id="role" value="{{ user_role }}" disabled>
+                                    <span class="input-tip">Role cannot be changed after registration</span>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Password & Security Tab -->
+                <div class="tab-content" id="security-tab">
+                    <form action="/profile" method="post" id="security-form">
+                        <!-- Keep the name and email fields but hidden -->
+                        <input type="hidden" name="name" value="{{ user_name }}">
+                        <input type="hidden" name="email" value="{{ user_email }}">
+                        
+                        <div class="form-group">
+                            <h3><i class="fas fa-lock"></i> Change Password</h3>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="current_password">Current Password</label>
+                                    <input type="password" id="current_password" name="current_password" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="new_password">New Password</label>
+                                    <input type="password" id="new_password" name="new_password" required>
+                                    <span class="input-tip">Password must be at least 8 characters with uppercase, lowercase and numbers</span>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="confirm_password">Confirm New Password</label>
+                                    <input type="password" id="confirm_password" name="confirm_password" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="save-btn"><i class="fas fa-key"></i> Update Password</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="profile-footer">
+                <a href="/tool" class="back-to-tool">
+                    <i class="fas fa-arrow-left"></i> Back to Prediction Tool
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons and tab contents
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                
+                // Show the corresponding tab content
+                const tabId = button.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+        
+        // Notification close button
+        document.querySelectorAll('.close-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                button.parentElement.style.display = 'none';
+            });
+        });
+        
+        // Automatically hide notifications after 5 seconds
+        setTimeout(() => {
+            document.querySelectorAll('.notification').forEach(notification => {
+                notification.style.display = 'none';
+            });
+        }, 5000);
+        
+        // Mobile menu toggle
+        const menuToggle = document.querySelector('.menu-toggle');
+        const nav = document.querySelector('nav');
+        
+        menuToggle.addEventListener('click', function() {
+            nav.classList.toggle('active');
+            this.classList.toggle('active');
+        });
+        
+        // Account dropdown functionality
+        const accountDropdowns = document.querySelectorAll('.account-dropdown');
+        const isMobile = window.innerWidth <= 768;
+        
+        accountDropdowns.forEach(dropdown => {
+            const btn = dropdown.querySelector('.account-btn, .auth-btn');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            if (btn && menu) {
+                dropdown.addEventListener('mouseenter', () => {
+                    menu.style.opacity = '1';
+                    menu.style.visibility = 'visible';
+                    menu.style.transform = isMobile ? 'none' : 'translateY(0)';
+                    
+                    if (isMobile) {
+                        menu.style.display = 'block';
+                    }
+                });
+                
+                dropdown.addEventListener('mouseleave', () => {
+                    menu.style.opacity = '0';
+                    menu.style.visibility = 'hidden';
+                    menu.style.transform = isMobile ? 'none' : 'translateY(10px)';
+                    
+                    if (isMobile) {
+                        setTimeout(() => {
+                            if (menu.style.opacity === '0') {
+                                menu.style.display = 'none';
+                            }
+                        }, 300);
+                    }
+                });
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth <= 768;
+            if (newIsMobile !== isMobile) {
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Breast Cancer Predictor</title>
+    <link rel="stylesheet" href="../static/landing.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-heartbeat"></i>Automated Breast Cancer Predictor</h1>
+            <button class="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav>
+                <ul>
+                    <li><a href="#home" class="nav-link">Home</a></li>
+                    <li><a href="#about" class="nav-link">About</a></li>
+                    <li><a href="#features" class="nav-link">Features</a></li>
+                    <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+                    {% if user_name %}
+                    <li>
+                        <div class="account-dropdown">
+                            <a href="#" class="account-btn">
+                                <i class="fas fa-user-md"></i> 
+                                <span>{% if user_role == "Doctor" %}Dr. {% endif %}{{ user_name }}</span>
+                                <i class="fas fa-caret-down"></i>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a href="/profile"><i class="fas fa-id-card"></i> Profile</a>
+                                <a href="/tool"><i class="fas fa-microscope"></i> Prediction Tool</a>
+                                <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li>
+                        <div class="account-dropdown">
+                            <a href="#" class="auth-btn">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Account</span>
+                                <i class="fas fa-caret-down"></i>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a href="/login"><i class="fas fa-sign-in-alt"></i> Log In</a>
+                                <a href="/signup"><i class="fas fa-user-plus"></i> Sign Up</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2>AI-Powered Breast Cancer Detection</h2>
+                <p>Using machine learning to help detect breast cancer through cell nucleus features analysis.</p>
+                {% if user_name %}
+                <a href="/tool" class="cta-button primary-cta"><i class="fas fa-microscope"></i> Start Prediction Tool</a>
+                {% else %}
+                <a href="/login" class="cta-button primary-cta"><i class="fas fa-sign-in-alt"></i> Start Prediction Tool</a>
+                {% endif %}
+            </div>
+            <div class="hero-image">
+                <img src="../static/images/hero-image.svg" alt="Breast Cancer Prediction Illustration">
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <div class="container">
+            <h2>About The Project</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>The Breast Cancer Predictor is a machine learning tool designed to assist medical professionals in the early detection of breast cancer. By analyzing cell nucleus features from breast mass samples, our model can predict whether a mass is benign or malignant with high accuracy.</p>
+                    <p>Early detection is crucial in the fight against breast cancer. This tool aims to provide an additional layer of screening that can help medical professionals make more informed decisions.</p>
+                </div>
+                <div class="stats">
+                    <div class="stat-box">
+                        <h3>95%+</h3>
+                        <p>Prediction Accuracy</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3>8</h3>
+                        <p>Feature Analysis</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Fast</h3>
+                        <p>Instant Results</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Key Features</h2>
+            <div class="feature-boxes">
+                <div class="feature-box">
+                    <i class="fas fa-microscope"></i>
+                    <h3>Comprehensive Analysis</h3>
+                    <p>Analyzes 8 different cell nucleus features to make accurate predictions</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-file-pdf"></i>
+                    <h3>PDF Reports</h3>
+                    <p>Generate detailed PDF reports with patient information and prediction results</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-envelope"></i>
+                    <h3>Email Reports</h3>
+                    <p>Send prediction reports directly to patients via email for convenient sharing</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-user-md"></i>
+                    <h3>Medical Support</h3>
+                    <p>Designed as a supportive tool for medical professionals</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Data Privacy</h3>
+                    <p>Patient data is processed securely and not stored permanently</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Advanced Visualization</h3>
+                    <p>Interactive charts and graphs to visualize risk factors, feature importance, and comparison with typical cases</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Input Patient Data</h3>
+                        <p>Enter basic patient information and cell nucleus measurements from the sample</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>AI Analysis</h3>
+                        <p>Our machine learning model analyzes the data using patterns learned from thousands of samples</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Get Results</h3>
+                        <p>Receive instant prediction results indicating benign or malignant with confidence level</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Visualize Data</h3>
+                        <p>Explore interactive visualizations showing prediction confidence, risk factors, feature importance, and comparisons with typical cases</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Generate Report</h3>
+                        <p>Create a professional PDF report for medical records and patient information</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h3>Share Results</h3>
+                        <p>Email the report directly to patients securely with detailed diagnosis information</p>
+                    </div>
+                </div>
+            </div>
+            <div class="cta-center">
+                {% if user_name %}
+                <a href="/tool" class="cta-button primary-cta"><i class="fas fa-microscope"></i> Try the Prediction Tool</a>
+                {% else %}
+                <a href="/login" class="cta-button primary-cta"><i class="fas fa-sign-in-alt"></i> Try the Prediction Tool</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <h3><i class="fas fa-heartbeat"></i> Automated Breast Cancer Predictor</h3>
+                    <p>A machine learning tool for early breast cancer detection</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        {% if user_name %}
+                        <li><a href="/tool">Prediction Tool</a></li>
+                        <li><a href="/logout">Logout</a></li>
+                        {% else %}
+                        <li><a href="/login">Login</a></li>
+                        <li><a href="/signup">Sign Up</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="footer-disclaimer">
+                    <h4>Disclaimer</h4>
+                    <p>This tool is designed to assist medical professionals and should not replace professional medical advice, diagnosis, or treatment.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 Breast Cancer Predictor. All rights reserved by Sougata Sarkar.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('.nav-link').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                window.scrollTo({
+                    top: targetSection.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+
+                // Close mobile menu after clicking a link
+                if (window.innerWidth <= 768) {
+                    document.querySelector('nav').classList.remove('active');
+                    document.querySelector('.menu-toggle').classList.remove('active');
+                }
+            });
+        });
+        
+        // Mobile menu toggle
+        const menuToggle = document.querySelector('.menu-toggle');
+        const nav = document.querySelector('nav');
+        
+        menuToggle.addEventListener('click', function() {
+            nav.classList.toggle('active');
+            this.classList.toggle('active');
+        });
+        
+        // Account dropdown functionality
+        const accountDropdowns = document.querySelectorAll('.account-dropdown');
+        const isMobile = window.innerWidth <= 768;
+        
+        accountDropdowns.forEach(dropdown => {
+            const btn = dropdown.querySelector('.account-btn, .auth-btn');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            if (btn && menu) {
+                if (isMobile) {
+                    // Click to toggle dropdown on mobile
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        menu.classList.toggle('active');
+                    });
+                } else {
+                    // Hover effect on desktop
+                    dropdown.addEventListener('mouseenter', () => {
+                        menu.style.opacity = '1';
+                        menu.style.visibility = 'visible';
+                        menu.style.transform = 'translateY(0)';
+                    });
+                    
+                    dropdown.addEventListener('mouseleave', () => {
+                        menu.style.opacity = '0';
+                        menu.style.visibility = 'hidden';
+                        menu.style.transform = 'translateY(10px)';
+                    });
+                }
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth <= 768;
+            if (newIsMobile !== isMobile) {
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html> 

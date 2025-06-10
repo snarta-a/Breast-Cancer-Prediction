@@ -1,0 +1,1877 @@
+<!-- Add Chart.js library for visualizations at the beginning of the page -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breast Cancer Prediction</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="/"><i class="fas fa-heartbeat"></i> Automated Breast Cancer Predictor</a>
+            </div>
+            <div class="user-info">
+                {% if user_name %}
+                <div class="user-dropdown">
+                    <a href="#" class="user-btn">
+                        <i class="fas fa-user-md"></i> 
+                        <span>{% if user_role == "Doctor" %}Dr. {% endif %}{{ user_name }}</span>
+                        <i class="fas fa-caret-down"></i>
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/profile"><i class="fas fa-id-card"></i> Profile</a>
+                        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="account-dropdown">
+                    <a href="#" class="account-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Account</span>
+                        <i class="fas fa-caret-down"></i>
+                    </a>
+                    <div class="dropdown-menu">
+                        <a href="/login"><i class="fas fa-sign-in-alt"></i> Log In</a>
+                        <a href="/signup"><i class="fas fa-user-plus"></i> Sign Up</a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if user_name %}
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Automated Breast Cancer Predictor</h1>
+        <p>Enter the cell nucleus features to predict if the breast mass is benign or malignant.</p>
+
+        <div class="result">
+            <div class="result-content">
+            <h2>{{ prediction_text }}</h2>
+            <p>{{ confidence }}</p>
+            </div>
+            {% if warning_message %}
+            <div class="warning-message">
+                <i class="fas fa-exclamation-triangle"></i> {{ warning_message }}
+            </div>
+            {% endif %}
+            {% if prediction_text %}
+            <div class="result-actions">
+                <button onclick="generatePDF()" class="pdf-btn"><i class="fas fa-file-pdf"></i> Generate PDF</button>
+                <button onclick="sendEmailReport()" class="email-btn"><i class="fas fa-envelope"></i> Email Report</button>
+            </div>
+            
+            <!-- Data Visualization Section -->
+            <div class="visualization-section">
+                <h3><i class="fas fa-chart-line"></i> Advanced Data Visualization</h3>
+                <div class="visualization-tabs">
+                    <div class="viz-tab active" data-tab="prediction-chart">Prediction Analysis</div>
+                    <div class="viz-tab" data-tab="risk-factors">Risk Factors</div>
+                    <div class="viz-tab" data-tab="feature-importance">Feature Importance</div>
+                    <div class="viz-tab" data-tab="comparison">Comparison</div>
+                </div>
+                
+                <div class="viz-content active" id="prediction-chart">
+                    <div class="visualization-container" id="prediction-chart-container">
+                        <canvas id="prediction-canvas"></canvas>
+                    </div>
+                    <p class="viz-description">This chart illustrates the prediction confidence for both malignant and benign outcomes. The higher the confidence percentage for a particular outcome, the more certain the model is of its prediction.</p>
+                </div>
+                
+                <div class="viz-content" id="risk-factors">
+                    <div class="visualization-container" id="risk-factors-chart">
+                        <canvas id="risk-factors-canvas"></canvas>
+                    </div>
+                    <div class="risk-factors-container" id="risk-factors-cards"></div>
+                    <p class="viz-description">The risk factors chart displays how different cell nucleus features contribute to the malignancy risk. Higher values in critical factors like radius, perimeter, and concavity typically indicate higher risk levels.</p>
+                </div>
+                
+                <div class="viz-content" id="feature-importance">
+                    <div class="visualization-container" id="feature-importance-chart">
+                        <canvas id="feature-importance-canvas"></canvas>
+                    </div>
+                    <p class="viz-description">This chart shows which features have the highest impact on the breast cancer prediction. Features with higher importance are more influential in determining whether a mass is malignant or benign.</p>
+                </div>
+                
+                <div class="viz-content" id="comparison">
+                    <div class="visualization-container" id="comparison-chart">
+                        <canvas id="comparison-canvas"></canvas>
+                    </div>
+                    <div class="visualization-legend" id="comparison-legend"></div>
+                    <p class="viz-description">The comparison chart shows how the patient's values compare to typical benign and malignant samples. This helps in understanding where the patient's results fall relative to known patterns.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Toast Messages -->
+        <div id="toast-container"></div>
+        
+        <form action="/predict" method="post" id="prediction-form">
+            <!-- Patient Details Section -->
+            <div class="form-group patient-details">
+                <h3><i class="fas fa-user-circle"></i> Patient Details</h3>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="patient_name">Full Name:</label>
+                        <input type="text" id="patient_name" name="patient_name" value="{{ patient_name|default('') }}" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="patient_age">Age:</label>
+                        <input type="number" id="patient_age" name="patient_age" min="1" max="120" value="{{ patient_age|default('') }}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="patient_gender">Gender:</label>
+                        <select id="patient_gender" name="patient_gender" required>
+                            <option value="" {% if not patient_gender %}selected{% endif %}>Select Gender</option>
+                            <option value="Male" {% if patient_gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if patient_gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option value="Other" {% if patient_gender == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="patient_contact">Contact Number:</label>
+                        <input type="tel" id="patient_contact" name="patient_contact" value="{{ patient_contact|default('') }}" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="patient_email">Email Address:</label>
+                        <input type="email" id="patient_email" name="patient_email" value="{{ patient_email|default('') }}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="patient_blood">Blood Group:</label>
+                        <select id="patient_blood" name="patient_blood" required>
+                            <option value="" {% if not patient_blood %}selected{% endif %}>Select Blood Group</option>
+                            <option value="A+" {% if patient_blood == 'A+' %}selected{% endif %}>A+</option>
+                            <option value="A-" {% if patient_blood == 'A-' %}selected{% endif %}>A-</option>
+                            <option value="B+" {% if patient_blood == 'B+' %}selected{% endif %}>B+</option>
+                            <option value="B-" {% if patient_blood == 'B-' %}selected{% endif %}>B-</option>
+                            <option value="AB+" {% if patient_blood == 'AB+' %}selected{% endif %}>AB+</option>
+                            <option value="AB-" {% if patient_blood == 'AB-' %}selected{% endif %}>AB-</option>
+                            <option value="O+" {% if patient_blood == 'O+' %}selected{% endif %}>O+</option>
+                            <option value="O-" {% if patient_blood == 'O-' %}selected{% endif %}>O-</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <h3><i class="fas fa-microscope"></i> Key Diagnostic Features</h3>
+                <p class="feature-info">These are the most important features for accurate breast cancer prediction.</p>
+                
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="radius_worst">Radius (worst):</label>
+                        <input type="number" id="radius_worst" name="radius_worst" step="0.01" value="{{ form_data.radius_worst if form_data else '' }}" required>
+                        <span class="input-tip">Distance from center to perimeter points (in micrometers)</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="area_worst">Area (worst):</label>
+                        <input type="number" id="area_worst" name="area_worst" step="0.01" value="{{ form_data.area_worst if form_data else '' }}" required>
+                        <span class="input-tip">Total area of the cell nucleus (in square micrometers)</span>
+                    </div>
+                    </div>
+                
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="perimeter_worst">Perimeter (worst):</label>
+                        <input type="number" id="perimeter_worst" name="perimeter_worst" step="0.01" value="{{ form_data.perimeter_worst if form_data else '' }}" required>
+                        <span class="input-tip">Total perimeter of the cell nucleus (in micrometers)</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="concave_points_mean">Concave Points (mean):</label>
+                        <input type="number" id="concave_points_mean" name="concave_points_mean" step="0.000001" value="{{ form_data.concave_points_mean if form_data else '' }}" required>
+                        <span class="input-tip">Number of concave portions of the contour (dimensionless)</span>
+                    </div>
+                    </div>
+                
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="concavity_worst">Concavity (worst):</label>
+                        <input type="number" id="concavity_worst" name="concavity_worst" step="0.000001" value="{{ form_data.concavity_worst if form_data else '' }}" required>
+                        <span class="input-tip">Severity of concave portions of the contour (dimensionless)</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="compactness_worst">Compactness (worst):</label>
+                        <input type="number" id="compactness_worst" name="compactness_worst" step="0.000001" value="{{ form_data.compactness_worst if form_data else '' }}" required>
+                        <span class="input-tip">Perimeter² / area - 1.0 (dimensionless)</span>
+                </div>
+            </div>
+            
+                <div class="form-row">
+                    <div class="form-field">
+                        <label for="texture_worst">Texture (worst):</label>
+                        <input type="number" id="texture_worst" name="texture_worst" step="0.01" value="{{ form_data.texture_worst if form_data else '' }}" required>
+                        <span class="input-tip">Standard deviation of gray-scale values (dimensionless)</span>
+                    </div>
+                    <div class="form-field">
+                        <label for="area_mean">Area (mean):</label>
+                        <input type="number" id="area_mean" name="area_mean" step="0.01" value="{{ form_data.area_mean if form_data else '' }}" required>
+                        <span class="input-tip">Average area of the cell nucleus (in square micrometers)</span>
+                    </div>
+                    </div>
+                
+                <!-- Hidden fields with default values for the remaining required features -->
+                <input type="hidden" id="texture_mean" name="texture_mean" value="{{ form_data.texture_mean if form_data else '16.89' }}">
+                <input type="hidden" id="perimeter_mean" name="perimeter_mean" value="{{ form_data.perimeter_mean if form_data else '92.58' }}">
+                <input type="hidden" id="smoothness_mean" name="smoothness_mean" value="{{ form_data.smoothness_mean if form_data else '0.1' }}">
+                <input type="hidden" id="compactness_mean" name="compactness_mean" value="{{ form_data.compactness_mean if form_data else '0.1' }}">
+                <input type="hidden" id="concavity_mean" name="concavity_mean" value="{{ form_data.concavity_mean if form_data else '0.09' }}">
+                <input type="hidden" id="symmetry_mean" name="symmetry_mean" value="{{ form_data.symmetry_mean if form_data else '0.18' }}">
+                <input type="hidden" id="fractal_dimension_mean" name="fractal_dimension_mean" value="{{ form_data.fractal_dimension_mean if form_data else '0.063' }}">
+                <input type="hidden" id="radius_mean" name="radius_mean" value="{{ form_data.radius_mean if form_data else '14.5' }}">
+                
+                <input type="hidden" id="radius_se" name="radius_se" value="{{ form_data.radius_se if form_data else '0.4' }}">
+                <input type="hidden" id="texture_se" name="texture_se" value="{{ form_data.texture_se if form_data else '0.9' }}">
+                <input type="hidden" id="perimeter_se" name="perimeter_se" value="{{ form_data.perimeter_se if form_data else '2.9' }}">
+                <input type="hidden" id="area_se" name="area_se" value="{{ form_data.area_se if form_data else '22.6' }}">
+                <input type="hidden" id="smoothness_se" name="smoothness_se" value="{{ form_data.smoothness_se if form_data else '0.007' }}">
+                <input type="hidden" id="concave_points_se" name="concave_points_se" value="{{ form_data.concave_points_se if form_data else '0.012' }}">
+                <input type="hidden" id="symmetry_se" name="symmetry_se" value="{{ form_data.symmetry_se if form_data else '0.021' }}">
+                <input type="hidden" id="fractal_dimension_se" name="fractal_dimension_se" value="{{ form_data.fractal_dimension_se if form_data else '0.004' }}">
+                
+                <input type="hidden" id="smoothness_worst" name="smoothness_worst" value="{{ form_data.smoothness_worst if form_data else '0.14' }}">
+                <input type="hidden" id="concave_points_worst" name="concave_points_worst" value="{{ form_data.concave_points_worst if form_data else '0.14' }}">
+                <input type="hidden" id="symmetry_worst" name="symmetry_worst" value="{{ form_data.symmetry_worst if form_data else '0.3' }}">
+                <input type="hidden" id="fractal_dimension_worst" name="fractal_dimension_worst" value="{{ form_data.fractal_dimension_worst if form_data else '0.1' }}">
+                <input type="hidden" id="smoothness_se" name="smoothness_se" value="{{ form_data.smoothness_se if form_data else '0.007' }}">
+                <input type="hidden" id="compactness_se" name="compactness_se" value="{{ form_data.compactness_se if form_data else '0.025' }}">
+                <input type="hidden" id="concavity_se" name="concavity_se" value="{{ form_data.concavity_se if form_data else '0.032' }}">
+                </div>
+            
+            <div class="form-row submit-row">
+                <button type="submit" class="predict-btn"><i class="fas fa-search"></i> Predict</button>
+                <button type="reset" class="reset-btn"><i class="fas fa-redo-alt"></i> Reset</button>
+                    </div>
+            
+            <!-- Sample Data Section -->
+            <div class="sample-data">
+                <h4>Sample Data for Testing</h4>
+                <p class="sample-description">Click any button below to fill the form with sample data showing different confidence levels</p>
+                
+                <!-- Sample Malignant Data - Strongly Malignant -->
+                <div class="sample-malignant">
+                    <strong>Strongly Malignant Sample:</strong> radius_worst=28.11, texture_worst=39.28, perimeter_worst=188.5, area_worst=2499.0, 
+                    concave_points_mean=0.15, concavity_worst=0.86, compactness_worst=0.66, area_mean=1058
+                    </div>
+                
+                <!-- Sample Malignant Data - Moderately Malignant -->
+                <div class="sample-malignant">
+                    <strong>Moderately Malignant Sample:</strong> radius_worst=19.82, texture_worst=27.6, perimeter_worst=127.8, area_worst=1203, 
+                    concave_points_mean=0.089, concavity_worst=0.43, compactness_worst=0.36, area_mean=735
+                    </div>
+                
+                <!-- Sample Borderline Data -->
+                <div class="sample-borderline">
+                    <strong>Borderline Sample:</strong> radius_worst=16.83, texture_worst=22.04, perimeter_worst=114.2, area_worst=870.8, 
+                    concave_points_mean=0.05, concavity_worst=0.22, compactness_worst=0.18, area_mean=566
+                </div>
+                
+                <!-- Sample Benign Data - Moderately Benign -->
+                <div class="sample-benign">
+                    <strong>Moderately Benign Sample:</strong> radius_worst=13.45, texture_worst=15.7, perimeter_worst=86.7, area_worst=563.0, 
+                    concave_points_mean=0.024, concavity_worst=0.12, compactness_worst=0.1, area_mean=412
+                    </div>
+                
+                <!-- Sample Benign Data - Strongly Benign -->
+                <div class="sample-benign">
+                    <strong>Strongly Benign Sample:</strong> radius_worst=10.9, texture_worst=12.4, perimeter_worst=73.2, area_worst=353.0, 
+                    concave_points_mean=0.009, concavity_worst=0.03, compactness_worst=0.05, area_mean=273
+                    </div>
+                
+                <!-- Sample Buttons -->
+                <div class="sample-btns">
+                    <button type="button" class="fill-btn strongly-malignant-btn" id="stronglyMalignantBtn">
+                        <i class="fas fa-exclamation-circle"></i> Strong Malignant
+                    </button>
+                    <button type="button" class="fill-btn moderately-malignant-btn" id="moderatelyMalignantBtn">
+                        <i class="fas fa-exclamation"></i> Medium Malignant
+                    </button>
+                    <button type="button" class="fill-btn borderline-btn" id="borderlineBtn">
+                        <i class="fas fa-question-circle"></i> Borderline
+                    </button>
+                    <button type="button" class="fill-btn moderately-benign-btn" id="moderatelyBenignBtn">
+                        <i class="fas fa-check"></i> Medium Benign
+                    </button>
+                    <button type="button" class="fill-btn strongly-benign-btn" id="stronglyBenignBtn">
+                        <i class="fas fa-check-circle"></i> Strong Benign
+                    </button>
+                    </div>
+                </div>
+        </form>
+            </div>
+            
+    <script type="text/template">
+        {% if visualization_data %}
+        window.serverVisualizationData = {
+            'Radius': parseFloat("{{ visualization_data.radius_worst }}"),
+            'Area': parseFloat("{{ visualization_data.area_worst }}"),
+            'Perimeter': parseFloat("{{ visualization_data.perimeter_worst }}"),
+            'Concave Points': parseFloat("{{ visualization_data.concave_points_mean }}"),
+            'Concavity': parseFloat("{{ visualization_data.concavity_worst }}"),
+            'Compactness': parseFloat("{{ visualization_data.compactness_worst }}"),
+            'Texture': parseFloat("{{ visualization_data.texture_worst }}")
+        };
+        {% else %}
+        window.serverVisualizationData = null;
+        {% endif %}
+    </script>
+
+    <script>
+        // Initialize visualization data from server - populated by the above script block
+        var serverVisualizationData = window.serverVisualizationData || null;
+
+        // Function to generate PDF
+        function generatePDF() {
+            window.location.href = "/generate_pdf";
+        }
+        
+        // Function to send email report
+        function sendEmailReport() {
+            // Check if patient email exists
+            const patientEmail = document.getElementById('patient_email').value;
+            if (!patientEmail) {
+                showToast('Please provide a patient email address', 'error');
+                document.getElementById('patient_email').focus();
+                return;
+            }
+            
+            // Show loading state
+            const emailBtn = document.querySelector('.email-btn');
+            const originalText = emailBtn.innerHTML;
+            emailBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            emailBtn.disabled = true;
+            
+            fetch('/send_email_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Failed to send email. Please try again.', 'error');
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                // Reset button state
+                emailBtn.innerHTML = originalText;
+                emailBtn.disabled = false;
+            });
+        }
+        
+        // Function to show toast messages
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            // Create toast content
+            const toastContent = document.createElement('div');
+            toastContent.className = 'toast-content';
+            toastContent.textContent = message;
+            
+            // Create close button
+            const closeButton = document.createElement('button');
+            closeButton.className = 'toast-close';
+            closeButton.innerHTML = '&times;';
+            closeButton.onclick = function() {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            };
+            
+            // Append elements
+            toast.appendChild(toastContent);
+            toast.appendChild(closeButton);
+            toastContainer.appendChild(toast);
+            
+            // Remove toast after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+        
+        // Fill form with sample data - Strongly Malignant
+        document.getElementById('stronglyMalignantBtn').addEventListener('click', function() {
+            // Set values for strongly malignant sample
+            document.getElementById('radius_worst').value = '28.11';
+            document.getElementById('texture_worst').value = '39.28';
+            document.getElementById('perimeter_worst').value = '188.5';
+            document.getElementById('area_worst').value = '2499.0';
+            document.getElementById('concave_points_mean').value = '0.15';
+            document.getElementById('concavity_worst').value = '0.86';
+            document.getElementById('compactness_worst').value = '0.66';
+            document.getElementById('area_mean').value = '1058';
+            
+            // Set other relevant fields to make prediction work
+            setDefaultValuesForOtherFields();
+        });
+        
+        // Fill form with sample data - Moderately Malignant
+        document.getElementById('moderatelyMalignantBtn').addEventListener('click', function() {
+            // Set values for moderately malignant sample
+            document.getElementById('radius_worst').value = '19.82';
+            document.getElementById('texture_worst').value = '27.6';
+            document.getElementById('perimeter_worst').value = '127.8';
+            document.getElementById('area_worst').value = '1203';
+            document.getElementById('concave_points_mean').value = '0.089';
+            document.getElementById('concavity_worst').value = '0.43';
+            document.getElementById('compactness_worst').value = '0.36'; 
+            document.getElementById('area_mean').value = '735';
+            
+            // Set other relevant fields to make prediction work
+            setDefaultValuesForOtherFields();
+        });
+        
+        // Fill form with sample data - Borderline Case
+        document.getElementById('borderlineBtn').addEventListener('click', function() {
+            document.getElementById('radius_worst').value = '16.83';
+            document.getElementById('texture_worst').value = '22.04';
+            document.getElementById('perimeter_worst').value = '114.2';
+            document.getElementById('area_worst').value = '870.8';
+            document.getElementById('concave_points_mean').value = '0.05';
+            document.getElementById('concavity_worst').value = '0.22';
+            document.getElementById('compactness_worst').value = '0.18';
+            document.getElementById('area_mean').value = '566';
+        });
+        
+        // Fill form with sample data - Moderately Benign
+        document.getElementById('moderatelyBenignBtn').addEventListener('click', function() {
+            document.getElementById('radius_worst').value = '13.45';
+            document.getElementById('texture_worst').value = '15.7';
+            document.getElementById('perimeter_worst').value = '86.7';
+            document.getElementById('area_worst').value = '563.0';
+            document.getElementById('concave_points_mean').value = '0.024';
+            document.getElementById('concavity_worst').value = '0.12';
+            document.getElementById('compactness_worst').value = '0.1';
+            document.getElementById('area_mean').value = '412';
+        });
+        
+        // Fill form with sample data - Strongly Benign
+        document.getElementById('stronglyBenignBtn').addEventListener('click', function() {
+            document.getElementById('radius_worst').value = '10.9';
+            document.getElementById('texture_worst').value = '12.4';
+            document.getElementById('perimeter_worst').value = '73.2';
+            document.getElementById('area_worst').value = '353.0';
+            document.getElementById('concave_points_mean').value = '0.009';
+            document.getElementById('concavity_worst').value = '0.03';
+            document.getElementById('compactness_worst').value = '0.05';
+            document.getElementById('area_mean').value = '273';
+            
+            // Set other relevant fields to make prediction work
+            setDefaultValuesForOtherFields();
+        });
+
+        // Function to set default values for other fields not covered by sample data
+        function setDefaultValuesForOtherFields() {
+            // Set reasonable defaults for fields not specified in sample data
+            // These values won't significantly impact prediction but ensure the form is complete
+            
+            // Mean features (if not already set)
+            if (!document.getElementById('radius_mean').value)
+                document.getElementById('radius_mean').value = '14.5';
+            if (!document.getElementById('texture_mean').value)
+                document.getElementById('texture_mean').value = '19.8';
+            if (!document.getElementById('perimeter_mean').value)
+                document.getElementById('perimeter_mean').value = '92.58';
+            if (!document.getElementById('smoothness_mean').value)
+                document.getElementById('smoothness_mean').value = '0.096';
+            if (!document.getElementById('compactness_mean').value)
+                document.getElementById('compactness_mean').value = '0.104';
+            if (!document.getElementById('concavity_mean').value)
+                document.getElementById('concavity_mean').value = '0.088';
+            if (!document.getElementById('symmetry_mean').value)
+                document.getElementById('symmetry_mean').value = '0.181';
+            if (!document.getElementById('fractal_dimension_mean').value)
+                document.getElementById('fractal_dimension_mean').value = '0.063';
+            
+            // SE features
+            if (!document.getElementById('radius_se').value)
+                document.getElementById('radius_se').value = '0.433';
+            if (!document.getElementById('texture_se').value)
+                document.getElementById('texture_se').value = '1.169';
+            if (!document.getElementById('perimeter_se').value)
+                document.getElementById('perimeter_se').value = '2.873';
+            if (!document.getElementById('area_se').value)
+                document.getElementById('area_se').value = '22.38';
+            if (!document.getElementById('smoothness_se').value)
+                document.getElementById('smoothness_se').value = '0.007';
+            if (!document.getElementById('compactness_se').value)
+                document.getElementById('compactness_se').value = '0.025';
+            if (!document.getElementById('concavity_se').value)
+                document.getElementById('concavity_se').value = '0.031';
+            if (!document.getElementById('concave_points_se').value)
+                document.getElementById('concave_points_se').value = '0.011';
+            if (!document.getElementById('symmetry_se').value)
+                document.getElementById('symmetry_se').value = '0.02';
+            if (!document.getElementById('fractal_dimension_se').value)
+                document.getElementById('fractal_dimension_se').value = '0.003';
+            
+            // Worst features (if not already set)
+            if (!document.getElementById('smoothness_worst').value)
+                document.getElementById('smoothness_worst').value = '0.132';
+            if (!document.getElementById('concave_points_worst').value)
+                document.getElementById('concave_points_worst').value = '0.107';
+            if (!document.getElementById('symmetry_worst').value)
+                document.getElementById('symmetry_worst').value = '0.291';
+            if (!document.getElementById('fractal_dimension_worst').value)
+                document.getElementById('fractal_dimension_worst').value = '0.083';
+            
+            // Set patient fields with some default values
+            if (!document.getElementById('patient_name').value)
+                document.getElementById('patient_name').value = 'Sample Patient';
+            if (!document.getElementById('patient_age').value)
+                document.getElementById('patient_age').value = '45';
+            if (!document.getElementById('patient_gender').value)
+                document.getElementById('patient_gender').value = 'Female';
+            if (!document.getElementById('patient_contact').value)
+                document.getElementById('patient_contact').value = '555-123-4567';
+            if (!document.getElementById('patient_blood').value)
+                document.getElementById('patient_blood').value = 'O+';
+            if (!document.getElementById('patient_email').value)
+                document.getElementById('patient_email').value = 'sample@example.com';
+        }
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('.top-nav');
+            if (window.scrollY > 20) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+
+        // Add hover effect for dropdown menus
+        const dropdowns = document.querySelectorAll('.user-dropdown, .account-dropdown');
+        const isMobile = window.innerWidth <= 768;
+        
+        dropdowns.forEach(dropdown => {
+            const btn = dropdown.querySelector('.user-btn, .account-btn');
+            const menu = dropdown.querySelector('.dropdown-menu');
+            
+            dropdown.addEventListener('mouseenter', () => {
+                menu.style.opacity = '1';
+                menu.style.visibility = 'visible';
+                
+                if (isMobile) {
+                    menu.style.transform = 'translateX(-50%) translateY(0)';
+                } else {
+                    menu.style.transform = 'translateY(0)';
+                }
+            });
+            
+            dropdown.addEventListener('mouseleave', () => {
+                menu.style.opacity = '0';
+                menu.style.visibility = 'hidden';
+                
+                if (isMobile) {
+                    menu.style.transform = 'translateX(-50%) translateY(10px)';
+                } else {
+                    menu.style.transform = 'translateY(10px)';
+                }
+            });
+        });
+        
+        // Update dropdown positioning on window resize
+        window.addEventListener('resize', () => {
+            const isNowMobile = window.innerWidth <= 768;
+            if (isNowMobile !== isMobile) {
+                location.reload();
+            }
+        });
+
+        // Data Visualization Tab Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if visualization section exists (only when prediction is done)
+            const vizSection = document.querySelector('.visualization-section');
+            if (!vizSection) return;
+            
+            const vizTabs = document.querySelectorAll('.viz-tab');
+            const vizContents = document.querySelectorAll('.viz-content');
+            
+            // Tab switching functionality
+            vizTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs and contents
+                    vizTabs.forEach(t => t.classList.remove('active'));
+                    vizContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to current tab and corresponding content
+                    tab.classList.add('active');
+                    const activeContent = document.getElementById(tab.dataset.tab);
+                    activeContent.classList.add('active');
+                    
+                    // Refresh charts if needed (to fix rendering issues)
+                    if (window.charts && window.charts[tab.dataset.tab]) {
+                        window.charts[tab.dataset.tab].render();
+                    }
+                });
+            });
+            
+            // Initialize visualization if prediction exists
+            const predictionText = document.querySelector('.result h2').textContent;
+            if (predictionText && predictionText !== '') {
+                // Wait a moment for the DOM to fully render
+                setTimeout(() => {
+                    console.log("Initializing visualizations...");
+                    initializeVisualizations();
+                }, 500);
+            }
+        });
+        
+        // Function to initialize visualizations
+        function initializeVisualizations() {
+            try {
+                console.log("Starting visualization initialization...");
+                
+                // Check if Chart object exists
+                if (typeof Chart === 'undefined') {
+                    console.error("Chart.js library not loaded properly");
+                    showFallbackVisualizations();
+                    return;
+                }
+                
+                // Store all charts for reference
+                window.charts = {};
+                
+                // Get prediction result and confidence
+                const resultText = document.querySelector('.result h2').textContent;
+                const confidenceText = document.querySelector('.result p').textContent;
+                
+                // Check if prediction indicates insufficient data
+                const insufficientData = resultText.includes('Insufficient Data');
+                if (insufficientData) {
+                    console.log("Insufficient data warning detected");
+                    document.querySelectorAll('.visualization-container').forEach(container => {
+                        container.innerHTML = '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Insufficient data provided. Enter valid values to generate visualizations.</div>';
+                    });
+                    return;
+                }
+                
+                // Parse prediction values
+                const isMalignant = resultText.includes('Malignant');
+                const confidenceValue = parseFloat(confidenceText.replace('Confidence: ', '').replace('%', '')) / 100;
+                
+                // Create prediction chart
+                try {
+                    console.log("Creating prediction chart...");
+                    createPredictionChart(isMalignant, confidenceValue);
+                } catch (error) {
+                    console.error("Error creating prediction chart:", error);
+                    document.getElementById('prediction-chart-container').innerHTML = '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Unable to render chart</div>';
+                }
+                
+                // Check if visualization data is available from server
+                let featureValues = {};
+                
+                // Use server-provided visualization data if available
+                if (serverVisualizationData) {
+                    console.log("Using server-provided visualization data");
+                    featureValues = serverVisualizationData;
+                } else {
+                    // Get feature values from the form - only use input fields that have values
+                    const getInputValue = (id) => {
+                        const element = document.getElementById(id);
+                        if (!element) {
+                            console.warn(`Element with id ${id} not found`);
+                            return null;
+                        }
+                        
+                        // For input fields
+                        if (element.tagName === 'INPUT') {
+                            // If the element is an input field, check if it has a value
+                            const value = element.value;
+                            console.log(`Got value for ${id}: ${value}`);
+                            if (value === null || value === undefined || value === '') {
+                                console.warn(`Empty value for ${id}`);
+                                return null;
+                            }
+                            return parseFloat(value);
+                        }
+                        
+                        // For elements that might contain the value as text (like displayed results)
+                        const value = parseFloat(element.textContent || element.innerText);
+                        if (isNaN(value)) {
+                            console.warn(`Invalid value for ${id}: ${element.textContent || element.innerText}`);
+                            return null;
+                        }
+                        return value;
+                    };
+                    
+                    // Get feature values from form inputs
+                    featureValues = {
+                        'Radius': getInputValue('radius_worst'),
+                        'Area': getInputValue('area_worst'),
+                        'Perimeter': getInputValue('perimeter_worst'),
+                        'Concave Points': getInputValue('concave_points_mean'),
+                        'Concavity': getInputValue('concavity_worst'),
+                        'Compactness': getInputValue('compactness_worst'),
+                        'Texture': getInputValue('texture_worst')
+                    };
+                }
+                
+                // If we've already submitted the form, try to use the values
+                if (document.querySelector('.result h2').textContent.includes('Prediction')) {
+                    console.log("Using values from submitted form");
+                    
+                    // If the form has been submitted but we're missing values, use sample values
+                    const useSampleValues = () => {
+                        console.log("Using sample values based on prediction");
+                        
+                        const isMalignant = document.querySelector('.result h2').textContent.includes('Malignant');
+                        
+                        // Use typical values based on result
+                        if (isMalignant) {
+                            featureValues['Radius'] = featureValues['Radius'] || 19.28;
+                            featureValues['Area'] = featureValues['Area'] || 1212.4;
+                            featureValues['Perimeter'] = featureValues['Perimeter'] || 123.5;
+                            featureValues['Concave Points'] = featureValues['Concave Points'] || 0.129;
+                            featureValues['Concavity'] = featureValues['Concavity'] || 0.28;
+                            featureValues['Compactness'] = featureValues['Compactness'] || 0.25;
+                            featureValues['Texture'] = featureValues['Texture'] || 22.16;
+                        } else {
+                            featureValues['Radius'] = featureValues['Radius'] || 12.35;
+                            featureValues['Area'] = featureValues['Area'] || 471.1;
+                            featureValues['Perimeter'] = featureValues['Perimeter'] || 78.94;
+                            featureValues['Concave Points'] = featureValues['Concave Points'] || 0.025;
+                            featureValues['Concavity'] = featureValues['Concavity'] || 0.09;
+                            featureValues['Compactness'] = featureValues['Compactness'] || 0.1;
+                            featureValues['Texture'] = featureValues['Texture'] || 18.23;
+                        }
+                    };
+                    
+                    // Check if we have enough valid values
+                    const validValues = Object.values(featureValues).filter(val => val !== null && !isNaN(val));
+                    if (validValues.length < 4) {
+                        useSampleValues();
+                    }
+                }
+                
+                // Filter out null values
+                Object.keys(featureValues).forEach(key => {
+                    if (featureValues[key] === null || isNaN(featureValues[key])) {
+                        console.warn(`Removing invalid value for ${key}: ${featureValues[key]}`);
+                        delete featureValues[key];
+                    }
+                });
+                
+                console.log("Feature values for visualization:", featureValues);
+                
+                // Only proceed if we have at least some data
+                if (Object.keys(featureValues).length === 0) {
+                    console.error("No valid feature values found for visualization");
+                    document.querySelectorAll('.visualization-container').forEach(container => {
+                        container.innerHTML = '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> No patient data available for visualization</div>';
+                    });
+                    return;
+                }
+                
+                // Create risk factors visualization
+                try {
+                    console.log("Creating risk factors visualization...");
+                    createRiskFactorsVisualization(featureValues);
+                } catch (error) {
+                    console.error("Error creating risk factors visualization:", error);
+                    document.getElementById('risk-factors-chart').innerHTML = '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Unable to render chart</div>';
+                }
+                
+                // Create feature importance chart
+                try {
+                    console.log("Creating feature importance chart...");
+                    createFeatureImportanceChart();
+                
+                } catch (error) {
+                    console.error("Error creating feature importance chart:", error);
+                    document.getElementById('feature-importance-chart').innerHTML = '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Unable to render chart</div>';
+                }
+                
+                // Create comparison chart
+                try {
+                    console.log("Creating comparison chart...");
+                    createComparisonChart(featureValues);
+                } catch (error) {
+                    console.error("Error creating comparison chart:", error);
+                    document.getElementById('comparison-chart').innerHTML = 
+                        '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Unable to render chart</div>';
+                }
+            } catch (error) {
+                console.error("Error initializing visualizations:", error);
+                showFallbackVisualizations();
+            }
+        }
+        
+        // Fallback to simple HTML visualizations when Chart.js fails
+        function showFallbackVisualizations() {
+            console.log("Using fallback visualizations...");
+            const vizSection = document.querySelector('.visualization-section');
+            
+            if (!vizSection) return;
+            
+            // Get prediction result and confidence
+            const resultText = document.querySelector('.result h2').textContent;
+            const confidenceText = document.querySelector('.result p').textContent;
+            const isMalignant = resultText.includes('Malignant');
+            
+            // Create a simple prediction visualization
+            const predictionContainer = document.getElementById('prediction-chart-container');
+            if (predictionContainer) {
+                const confidenceValue = parseFloat(confidenceText.replace('Confidence: ', '').replace('%', ''));
+                const prediction = isMalignant ? 'Malignant' : 'Benign';
+                const color = isMalignant ? '#F44336' : '#4CAF50';
+                
+                predictionContainer.innerHTML = `
+                    <div class="fallback-visualization">
+                        <div class="fallback-prediction" style="background-color: ${color};">
+                            <div class="prediction-label">${prediction}</div>
+                            <div class="prediction-value">${confidenceValue}% Confidence</div>
+                    </div>
+                        <div class="fallback-description">
+                            This prediction indicates a ${confidenceValue}% confidence that the tumor is ${prediction.toLowerCase()}.
+                    </div>
+                    </div>
+                `;
+            }
+            
+            // Create a simple risk factors visualization
+            const riskFactorsContainer = document.getElementById('risk-factors-chart');
+            if (riskFactorsContainer) {
+                // Get feature values from the form
+                const featureValues = {
+                    'Radius': parseFloat(document.getElementById('radius_worst').value || 0),
+                    'Area': parseFloat(document.getElementById('area_worst').value || 0),
+                    'Perimeter': parseFloat(document.getElementById('perimeter_worst').value || 0),
+                    'Concave Points': parseFloat(document.getElementById('concave_points_mean').value || 0),
+                    'Concavity': parseFloat(document.getElementById('concavity_worst').value || 0),
+                    'Compactness': parseFloat(document.getElementById('compactness_worst').value || 0),
+                    'Texture': parseFloat(document.getElementById('texture_worst').value || 0)
+                };
+                
+                let riskFactorsHTML = '<div class="fallback-visualization fallback-risk-factors">';
+                
+                // Function to determine risk level
+                function getRiskLevel(feature, value) {
+                    const thresholds = {
+                        'Radius': { low: 10, medium: 15, high: 20 },
+                        'Area': { low: 400, medium: 700, high: 1000 },
+                        'Perimeter': { low: 65, medium: 100, high: 130 },
+                        'Concave Points': { low: 0.02, medium: 0.05, high: 0.1 },
+                        'Concavity': { low: 0.05, medium: 0.2, high: 0.4 },
+                        'Compactness': { low: 0.05, medium: 0.2, high: 0.4 },
+                        'Texture': { low: 15, medium: 22, high: 30 }
+                    };
+                    
+                    if (value <= thresholds[feature].low) return { level: 'Low', color: '#2ecc71' };
+                    if (value <= thresholds[feature].medium) return { level: 'Medium', color: '#f39c12' };
+                    if (value <= thresholds[feature].high) return { level: 'High', color: '#e74c3c' };
+                    return { level: 'Very High', color: '#c0392b' };
+                }
+                
+                // Create a bar for each feature
+                for (const [feature, value] of Object.entries(featureValues)) {
+                    const risk = getRiskLevel(feature, value);
+                    const percentage = Math.min((value / (risk.level === 'Very High' ? value * 1.2 : value)) * 100, 100);
+                    
+                    riskFactorsHTML += `
+                        <div class="fallback-risk-factor">
+                            <div class="risk-factor-name">${feature}: ${value}</div>
+                            <div class="risk-factor-bar">
+                                <div class="risk-factor-fill" style="width: ${percentage}%; background-color: ${risk.color};"></div>
+                </div>
+                            <div class="risk-factor-level" style="color: ${risk.color};">${risk.level} Risk</div>
+                    </div>
+                    `;
+                }
+                
+                riskFactorsHTML += '</div>';
+                riskFactorsContainer.innerHTML = riskFactorsHTML;
+            }
+            
+            // Add fallback styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .fallback-visualization {
+                    padding: 20px;
+                    background-color: #f8f9fa;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                }
+                
+                .fallback-prediction {
+                    text-align: center;
+                    padding: 30px;
+                    border-radius: 10px;
+                    color: white;
+                    margin-bottom: 20px;
+                }
+                
+                .prediction-label {
+                    font-size: 2rem;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                }
+                
+                .prediction-value {
+                    font-size: 1.2rem;
+                }
+                
+                .fallback-description {
+                    text-align: center;
+                    font-size: 1rem;
+                    color: #555;
+                }
+                
+                .fallback-risk-factors {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 15px;
+                }
+                
+                .fallback-risk-factor {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                }
+                
+                .risk-factor-name {
+                    font-weight: 500;
+                }
+                
+                .risk-factor-bar {
+                    height: 20px;
+                    background-color: #e9ecef;
+                    border-radius: 4px;
+                    overflow: hidden;
+                }
+                
+                .risk-factor-fill {
+                    height: 100%;
+                    transition: width 0.5s ease;
+                }
+                
+                .risk-factor-level {
+                    font-weight: 500;
+                    text-align: right;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Create Prediction Chart
+        function createPredictionChart(isMalignant, confidenceValue) {
+            const canvas = document.getElementById('prediction-canvas');
+            if (!canvas) {
+                console.error('Prediction canvas element not found');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Unable to get 2d context from canvas');
+                return;
+            }
+
+            // Clear any existing chart
+            if (window.charts.predictionChart) {
+                window.charts.predictionChart.destroy();
+            }
+            
+            // Set up data for doughnut chart
+            const benignValue = isMalignant ? 1 - confidenceValue : confidenceValue;
+            const malignantValue = isMalignant ? confidenceValue : 1 - confidenceValue;
+            
+            window.charts.predictionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Benign', 'Malignant'],
+                    datasets: [{
+                        data: [benignValue * 100, malignantValue * 100],
+                        backgroundColor: ['#4CAF50', '#F44336'],
+                        borderColor: ['#43A047', '#E53935'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Prediction Probability',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.raw.toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Create a prediction result element outside the chart
+            const container = document.getElementById('prediction-chart-container');
+            
+            // Clean up any existing result elements
+            const existingResults = container.querySelectorAll('.prediction-result');
+            existingResults.forEach(el => container.removeChild(el));
+            
+            // Create the result element
+            const resultElement = document.createElement('div');
+            resultElement.className = 'prediction-result';
+            resultElement.textContent = isMalignant ? 'Malignant' : 'Benign';
+            resultElement.style.color = isMalignant ? '#F44336' : '#4CAF50';
+            resultElement.style.position = 'absolute';
+            resultElement.style.top = '50%';
+            resultElement.style.left = '50%';
+            resultElement.style.transform = 'translate(-50%, -50%)';
+            resultElement.style.fontSize = '1.8rem';
+            resultElement.style.fontWeight = 'bold';
+            resultElement.style.textAlign = 'center';
+            resultElement.style.padding = '5px 15px';
+            resultElement.style.borderRadius = '20px';
+            resultElement.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            resultElement.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.1)';
+            resultElement.style.zIndex = '100';
+            
+            // Add the result element to the container
+            container.appendChild(resultElement);
+        }
+        
+        // Create Risk Factors Visualization
+        function createRiskFactorsVisualization(featureValues) {
+            const canvas = document.getElementById('risk-factors-canvas');
+            if (!canvas) {
+                console.error('Risk factors canvas element not found');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Unable to get 2d context from canvas');
+                return;
+            }
+
+            console.log('Risk factors data:', featureValues);
+
+            // Clear any existing chart
+            if (window.charts.riskFactorsChart) {
+                window.charts.riskFactorsChart.destroy();
+            }
+            
+            // Ensure we have valid data
+            if (!featureValues || Object.keys(featureValues).length === 0) {
+                console.error('No feature values provided for risk factors visualization');
+                document.getElementById('risk-factors-chart').innerHTML = 
+                    '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Cannot load risk factors - missing data</div>';
+                return;
+            }
+            
+            // Threshold values for each feature (approximated from typical values)
+            const thresholds = {
+                'Radius': { low: 10, medium: 15, high: 20 },
+                'Area': { low: 400, medium: 700, high: 1000 },
+                'Perimeter': { low: 65, medium: 100, high: 130 },
+                'Concave Points': { low: 0.02, medium: 0.05, high: 0.1 },
+                'Concavity': { low: 0.05, medium: 0.2, high: 0.4 },
+                'Compactness': { low: 0.05, medium: 0.2, high: 0.4 },
+                'Texture': { low: 15, medium: 22, high: 30 }
+            };
+            
+            // Calculate risk level for each feature
+            const riskLevels = {};
+            const normalizedValues = {};
+            let labels = [];
+            let data = [];
+            let backgroundColors = [];
+            
+            for (const [feature, value] of Object.entries(featureValues)) {
+                // Skip if value is NaN or undefined
+                if (isNaN(value) || value === undefined) {
+                    console.warn(`Invalid value for ${feature}: ${value}`);
+                    continue;
+                }
+                
+                let riskLevel;
+                let color;
+                
+                if (value <= thresholds[feature].low) {
+                    riskLevel = 'Low';
+                    color = '#2ecc71';
+                } else if (value <= thresholds[feature].medium) {
+                    riskLevel = 'Medium';
+                    color = '#f39c12';
+                } else if (value <= thresholds[feature].high) {
+                    riskLevel = 'High';
+                    color = '#e74c3c';
+                } else {
+                    riskLevel = 'Very High';
+                    color = '#c0392b';
+                }
+                
+                riskLevels[feature] = riskLevel;
+                
+                // Normalize the value for chart display (0-100%)
+                const max = thresholds[feature].high * 1.5; // Set a reasonable maximum
+                const normalized = Math.min((value / max) * 100, 100);
+                normalizedValues[feature] = normalized;
+                
+                labels.push(feature);
+                data.push(normalized);
+                backgroundColors.push(color);
+            }
+            
+            // Create horizontal bar chart for risk factors
+            const riskChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Risk Level (%)',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const feature = context.label;
+                                    const value = featureValues[feature];
+                                    const risk = riskLevels[feature];
+                                    return `${feature}: ${value} (${risk} Risk)`;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Risk Factors Analysis',
+                            font: {
+                                size: 18
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Risk Level (%)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            window.charts.riskFactorsChart = riskChart;
+            
+            // Create prediction badge outside the chart
+            const container = document.getElementById('risk-factors-chart');
+            
+            // Remove any existing prediction badges
+            const existingBadges = container.querySelectorAll('.prediction-badge');
+            existingBadges.forEach(badge => container.removeChild(badge));
+            
+            // Create the prediction badge
+            const resultElement = document.createElement('div');
+            resultElement.className = 'prediction-badge';
+            
+            // Get prediction text from the result section
+            const resultText = document.querySelector('.result h2').textContent;
+            const isMalignant = resultText.includes('Malignant');
+            
+            resultElement.textContent = isMalignant ? 'Malignant' : 'Benign';
+            resultElement.style.backgroundColor = isMalignant ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)';
+            resultElement.style.color = isMalignant ? '#F44336' : '#4CAF50';
+            
+            // Position the badge in the top-right corner
+            resultElement.style.position = 'absolute';
+            resultElement.style.top = '10px';
+            resultElement.style.right = '10px';
+            resultElement.style.zIndex = '100';
+            resultElement.style.padding = '5px 10px';
+            resultElement.style.borderRadius = '4px';
+            resultElement.style.fontWeight = 'bold';
+            
+            // Add the result badge to the container
+            container.appendChild(resultElement);
+            
+            // Create risk factor cards
+            const cardsContainer = document.getElementById('risk-factors-cards');
+            cardsContainer.innerHTML = '';
+            
+            for (const [feature, value] of Object.entries(featureValues)) {
+                // Skip if value is NaN or undefined
+                if (isNaN(value) || value === undefined) continue;
+                
+                const riskLevel = riskLevels[feature];
+                let icon, factorClass;
+                
+                switch(riskLevel) {
+                    case 'Low':
+                        icon = 'fa-check-circle';
+                        factorClass = 'factor-low';
+                        break;
+                    case 'Medium':
+                        icon = 'fa-exclamation-circle';
+                        factorClass = 'factor-medium';
+                        break;
+                    case 'High':
+                    case 'Very High':
+                        icon = 'fa-times-circle';
+                        factorClass = 'factor-high';
+                        break;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'risk-factor-card';
+                card.innerHTML = `
+                    <div class="risk-factor-header">
+                        <i class="fas ${icon} ${factorClass}"></i>
+                        <h4>${feature}</h4>
+        </div>
+                    <div class="risk-factor-value ${factorClass}">${value}</div>
+                    <div class="risk-factor-description">
+                        <strong>Risk Level: ${riskLevel}</strong><br>
+                        ${getRiskDescription(feature, riskLevel)}
+    </div>
+                `;
+                
+                cardsContainer.appendChild(card);
+            }
+        }
+        
+        // Function to get risk description for a feature
+        function getRiskDescription(feature, riskLevel) {
+            const descriptions = {
+                'Radius': {
+                    'Low': 'Cell nucleus radius is within normal range.',
+                    'Medium': 'Cell nucleus radius is slightly elevated.',
+                    'High': 'Cell nucleus radius is significantly larger than normal cells.',
+                    'Very High': 'Cell nucleus radius is extremely large, strongly indicating abnormal cell growth.'
+                },
+                'Area': {
+                    'Low': 'Cell nucleus area is within normal parameters.',
+                    'Medium': 'Cell nucleus area shows moderate enlargement.',
+                    'High': 'Cell nucleus area is significantly larger than typical benign cells.',
+                    'Very High': 'Cell nucleus area is extremely large, a strong indicator of malignancy.'
+                },
+                'Perimeter': {
+                    'Low': 'Cell perimeter is within normal range.',
+                    'Medium': 'Cell perimeter shows some enlargement.',
+                    'High': 'Cell perimeter is significantly larger than normal.',
+                    'Very High': 'Cell perimeter is extremely large, strongly suggesting malignancy.'
+                },
+                'Concave Points': {
+                    'Low': 'Few concave portions in the cell contour.',
+                    'Medium': 'Moderate number of concave portions.',
+                    'High': 'High number of concave portions, suggesting cell abnormality.',
+                    'Very High': 'Extremely high number of concave points, strongly indicative of malignancy.'
+                },
+                'Concavity': {
+                    'Low': 'Minimal severity of concave portions.',
+                    'Medium': 'Moderate concavity in cell contour.',
+                    'High': 'High concavity, suggesting abnormal cell structure.',
+                    'Very High': 'Extreme concavity, strongly associated with malignancy.'
+                },
+                'Compactness': {
+                    'Low': 'Cell compactness is within normal parameters.',
+                    'Medium': 'Moderately compact cell structure.',
+                    'High': 'High compactness, indicating potential abnormality.',
+                    'Very High': 'Extremely compact cell structure, commonly seen in malignant cells.'
+                },
+                'Texture': {
+                    'Low': 'Cell texture variation is minimal.',
+                    'Medium': 'Moderate texture variation in cell structure.',
+                    'High': 'Significant texture variation, suggesting cell abnormality.',
+                    'Very High': 'Extreme texture variation, often associated with malignant cells.'
+                }
+            };
+            
+            return descriptions[feature][riskLevel] || 'No description available.';
+        }
+        
+        // Create Feature Importance Chart
+        function createFeatureImportanceChart() {
+            const canvas = document.getElementById('feature-importance-canvas');
+            if (!canvas) {
+                console.error('Feature importance canvas element not found');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Unable to get 2d context from canvas');
+                return;
+            }
+
+            // Clear any existing chart
+            if (window.charts.featureImportanceChart) {
+                window.charts.featureImportanceChart.destroy();
+            }
+            
+            // Feature importance based on research/model (approximate values)
+            const featureImportance = [
+                { feature: 'Concave Points (mean)', importance: 0.16 },
+                { feature: 'Area (worst)', importance: 0.15 },
+                { feature: 'Perimeter (worst)', importance: 0.14 },
+                { feature: 'Radius (worst)', importance: 0.13 },
+                { feature: 'Concavity (worst)', importance: 0.12 },
+                { feature: 'Compactness (worst)', importance: 0.10 },
+                { feature: 'Texture (worst)', importance: 0.08 },
+                { feature: 'Area (mean)', importance: 0.07 },
+                { feature: 'Symmetry (worst)', importance: 0.03 },
+                { feature: 'Fractal Dimension (worst)', importance: 0.02 }
+            ];
+            
+            const importanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: featureImportance.map(item => item.feature),
+                    datasets: [{
+                        label: 'Importance Score',
+                        data: featureImportance.map(item => item.importance),
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Feature Importance in Prediction Model',
+                            font: {
+                                size: 18
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Importance: ' + (context.raw * 100).toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Importance Score'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            window.charts.featureImportanceChart = importanceChart;
+            
+            // Instead of displaying the prediction directly on the chart,
+            // create a separate DOM element outside the chart canvas
+            const container = document.getElementById('feature-importance-chart');
+            
+            // Remove any existing prediction badges
+            const existingBadges = container.querySelectorAll('.prediction-badge');
+            existingBadges.forEach(badge => container.removeChild(badge));
+            
+            // Create the prediction badge
+            const resultElement = document.createElement('div');
+            resultElement.className = 'prediction-badge';
+            
+            // Get prediction text from the result section
+            const resultText = document.querySelector('.result h2').textContent;
+            const isMalignant = resultText.includes('Malignant');
+            
+            resultElement.textContent = isMalignant ? 'Malignant' : 'Benign';
+            resultElement.style.backgroundColor = isMalignant ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)';
+            resultElement.style.color = isMalignant ? '#F44336' : '#4CAF50';
+            
+            // Position the badge in the top-right corner of the chart container
+            resultElement.style.position = 'absolute';
+            resultElement.style.top = '10px';
+            resultElement.style.right = '10px';
+            resultElement.style.zIndex = '100';
+            resultElement.style.padding = '5px 10px';
+            resultElement.style.borderRadius = '4px';
+            resultElement.style.fontWeight = 'bold';
+            
+            // Add the result element to the container
+            container.appendChild(resultElement);
+        }
+        
+        // Create Comparison Chart
+        function createComparisonChart(featureValues) {
+            const canvas = document.getElementById('comparison-canvas');
+            if (!canvas) {
+                console.error('Comparison canvas element not found');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Unable to get 2d context from canvas');
+                return;
+            }
+
+            console.log('Comparison data:', featureValues);
+
+            // Clear any existing chart
+            if (window.charts.comparisonChart) {
+                window.charts.comparisonChart.destroy();
+            }
+            
+            // Ensure we have valid data
+            if (!featureValues || Object.keys(featureValues).length === 0) {
+                console.error('No feature values provided for comparison chart');
+                document.getElementById('comparison-chart').innerHTML = 
+                    '<div class="chart-error"><i class="fas fa-exclamation-circle"></i> Cannot load comparison - missing data</div>';
+                return;
+            }
+            
+            // Reference values for typical benign and malignant cases
+            const benignValues = {
+                'Radius': 12.35,
+                'Area': 471.1,
+                'Perimeter': 78.94,
+                'Concave Points': 0.025,
+                'Concavity': 0.09,
+                'Compactness': 0.10,
+                'Texture': 18.23
+            };
+            
+            const malignantValues = {
+                'Radius': 19.28,
+                'Area': 1212.4,
+                'Perimeter': 123.5,
+                'Concave Points': 0.129,
+                'Concavity': 0.28,
+                'Compactness': 0.25,
+                'Texture': 22.16
+            };
+            
+            // Calculate normalized values for better visualization
+            const maxValues = {
+                'Radius': 25,
+                'Area': 2000,
+                'Perimeter': 190,
+                'Concave Points': 0.2,
+                'Concavity': 0.7,
+                'Compactness': 0.7,
+                'Texture': 40
+            };
+            
+            const labels = Object.keys(featureValues);
+            
+            // Create radar chart for comparison
+            const comparisonChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Patient Values',
+                            data: labels.map(feature => {
+                                const value = featureValues[feature];
+                                if (isNaN(value) || value === undefined) return 0;
+                                return (value / maxValues[feature]) * 100;
+                            }),
+                            backgroundColor: 'rgba(142, 68, 173, 0.2)',
+                            borderColor: 'rgba(142, 68, 173, 1)',
+                            pointBackgroundColor: 'rgba(142, 68, 173, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(142, 68, 173, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Typical Benign',
+                            data: labels.map(feature => (benignValues[feature] / maxValues[feature]) * 100),
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                            borderColor: 'rgba(46, 204, 113, 1)',
+                            pointBackgroundColor: 'rgba(46, 204, 113, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(46, 204, 113, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Typical Malignant',
+                            data: labels.map(feature => (malignantValues[feature] / maxValues[feature]) * 100),
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(231, 76, 60, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                beginAtZero: true,
+                                max: 100,
+                                stepSize: 20,
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Patient Values Compared to Typical Cases',
+                            font: {
+                                size: 18
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label;
+                                    const feature = labels[context.dataIndex];
+                                    let value;
+                                    
+                                    if (datasetLabel === 'Patient Values') {
+                                        value = featureValues[feature];
+                                    } else if (datasetLabel === 'Typical Benign') {
+                                        value = benignValues[feature];
+                                    } else {
+                                        value = malignantValues[feature];
+                                    }
+                                    
+                                    return `${datasetLabel}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            window.charts.comparisonChart = comparisonChart;
+            
+            // Create prediction badge outside the chart
+            const container = document.getElementById('comparison-chart');
+            
+            // Remove any existing prediction badges
+            const existingBadges = container.querySelectorAll('.prediction-badge');
+            existingBadges.forEach(badge => container.removeChild(badge));
+            
+            // Create the prediction badge
+            const resultElement = document.createElement('div');
+            resultElement.className = 'prediction-badge';
+            
+            // Get prediction text from the result section
+            const resultText = document.querySelector('.result h2').textContent;
+            const isMalignant = resultText.includes('Malignant');
+            
+            resultElement.textContent = isMalignant ? 'Malignant' : 'Benign';
+            resultElement.style.backgroundColor = isMalignant ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)';
+            resultElement.style.color = isMalignant ? '#F44336' : '#4CAF50';
+            
+            // Position the badge in the top-right corner
+            resultElement.style.position = 'absolute';
+            resultElement.style.top = '10px';
+            resultElement.style.right = '10px';
+            resultElement.style.zIndex = '100';
+            resultElement.style.padding = '5px 10px';
+            resultElement.style.borderRadius = '4px';
+            resultElement.style.fontWeight = 'bold';
+            
+            // Add the result badge to the container
+            container.appendChild(resultElement);
+            
+            // Create legend
+            const legendContainer = document.getElementById('comparison-legend');
+            legendContainer.innerHTML = '';
+            
+            const legendData = [
+                { label: 'Patient Values', color: 'rgba(142, 68, 173, 1)' },
+                { label: 'Typical Benign', color: 'rgba(46, 204, 113, 1)' },
+                { label: 'Typical Malignant', color: 'rgba(231, 76, 60, 1)' }
+            ];
+            
+            legendData.forEach(item => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = 'legend-color';
+                colorBox.style.backgroundColor = item.color;
+                
+                const label = document.createElement('span');
+                label.textContent = item.label;
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(label);
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // Add this at the end of the script before the Chart.js library inclusion
+        window.addEventListener('error', function(e) {
+            if (e.message.includes('Chart is not defined') || e.message.includes('Cannot read properties of null')) {
+                console.error('Chart.js error detected:', e.message);
+                const vizSection = document.querySelector('.visualization-section');
+                if (vizSection) {
+                    vizSection.innerHTML = '<div class="chart-error-global"><i class="fas fa-exclamation-triangle"></i> Chart.js library failed to load properly. Please refresh the page or try again later.</div>';
+                }
+            }
+        });
+
+        // Add these styles to the head
+        document.addEventListener('DOMContentLoaded', function() {
+            const style = document.createElement('style');
+            style.textContent = `
+                .prediction-result {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 1.8rem;
+                    font-weight: bold;
+                    padding: 5px 15px;
+                    border-radius: 20px;
+                    background-color: rgba(255, 255, 255, 0.9);
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                    z-index: 10;
+                }
+                
+                .prediction-badge {
+                    display: inline-block;
+                    margin: 10px;
+                    padding: 5px 15px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    font-size: 1rem;
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 10;
+                }
+                
+                .visualization-container {
+                    position: relative;
+                }
+                
+                .chart-error, .chart-error-global {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: #e74c3c;
+                    font-weight: 500;
+                    text-align: center;
+                    padding: 20px;
+                    background-color: rgba(231, 76, 60, 0.1);
+                    border-radius: 8px;
+                }
+                .chart-error i, .chart-error-global i {
+                    margin-right: 10px;
+                    font-size: 1.5rem;
+                }
+                .chart-error-global {
+                    padding: 40px;
+                    font-size: 1.2rem;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // Reset button functionality
+        document.querySelector('.reset-btn').addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default form reset
+            
+            // Reset all form fields
+            const form = document.getElementById('prediction-form');
+            form.reset();
+            
+            // Clear all input fields explicitly
+            const allInputs = form.querySelectorAll('input, select, textarea');
+            allInputs.forEach(input => {
+                if (input.type === 'hidden') {
+                    // Reset hidden fields to their default values
+                    switch(input.id) {
+                        case 'texture_mean':
+                            input.value = '16.89';
+                            break;
+                        case 'perimeter_mean':
+                            input.value = '92.58';
+                            break;
+                        case 'smoothness_mean':
+                            input.value = '0.1';
+                            break;
+                        case 'compactness_mean':
+                            input.value = '0.1';
+                            break;
+                        case 'concavity_mean':
+                            input.value = '0.09';
+                            break;
+                        case 'symmetry_mean':
+                            input.value = '0.18';
+                            break;
+                        case 'fractal_dimension_mean':
+                            input.value = '0.063';
+                            break;
+                        case 'radius_mean':
+                            input.value = '14.5';
+                            break;
+                        case 'radius_se':
+                            input.value = '0.4';
+                            break;
+                        case 'texture_se':
+                            input.value = '0.9';
+                            break;
+                        case 'perimeter_se':
+                            input.value = '2.9';
+                            break;
+                        case 'area_se':
+                            input.value = '22.6';
+                            break;
+                        case 'smoothness_se':
+                            input.value = '0.007';
+                            break;
+                        case 'concave_points_se':
+                            input.value = '0.012';
+                            break;
+                        case 'symmetry_se':
+                            input.value = '0.021';
+                            break;
+                        case 'fractal_dimension_se':
+                            input.value = '0.004';
+                            break;
+                        case 'smoothness_worst':
+                            input.value = '0.14';
+                            break;
+                        case 'concave_points_worst':
+                            input.value = '0.14';
+                            break;
+                        case 'symmetry_worst':
+                            input.value = '0.3';
+                            break;
+                        case 'fractal_dimension_worst':
+                            input.value = '0.1';
+                            break;
+                        case 'compactness_se':
+                            input.value = '0.025';
+                            break;
+                        case 'concavity_se':
+                            input.value = '0.032';
+                            break;
+                    }
+                } else {
+                    // Clear visible input fields
+                    input.value = '';
+                }
+            });
+            
+            // Clear any existing prediction result
+            const resultSection = document.querySelector('.result');
+            if (resultSection) {
+                resultSection.innerHTML = '';
+            }
+            
+            // Clear any existing visualizations
+            const vizSection = document.querySelector('.visualization-section');
+            if (vizSection) {
+                vizSection.remove();
+            }
+            
+            // Clear any existing toast messages
+            const toastContainer = document.getElementById('toast-container');
+            toastContainer.innerHTML = '';
+            
+            // Reset any charts
+            if (window.charts) {
+                Object.values(window.charts).forEach(chart => {
+                    if (chart) {
+                        chart.destroy();
+                    }
+                });
+                window.charts = {};
+            }
+            
+            // Scroll to top of the page
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Show success message
+            showToast('Form has been reset successfully', 'success');
+        });
+    </script>
+</body>
+</html>
