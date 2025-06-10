@@ -47,7 +47,6 @@ Clone the repository
 bash
 Copy
 Edit
-git clone https://github.com/yourusername/breast-cancer-prediction.git
 cd breast-cancer-prediction
 Install dependencies
 
@@ -61,8 +60,7 @@ bash
 Copy
 Edit
 python app.py
-Visit in browser
-Open http://127.0.0.1:5000 in your browser
+
 
 ✅ Screenshots
 (Add screenshots of your app UI here)
